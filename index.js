@@ -22,10 +22,29 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 async function run() {
     try {
       await client.connect();
-    //   const database = client.db("careZone");
-    //   const movies = database.collection("movies");
+      const database = client.db("careZone");
+      const appointmentsCollection = database.collection("appointments");
      
-    console.log('Database Connected Successfully')
+      app.get('/appointments', async (req, res) => {
+        const email = req.query.email;
+        const date = new Date(req.query.date).toLocaleDateString();
+
+        const query = { email: email, date: date }
+
+        const cursor = appointmentsCollection.find(query);
+        const appointments = await cursor.toArray();
+        res.json(appointments);
+    })
+
+
+      app.post('/appointments', async (req, res) => {
+        const appointment = req.body;
+        const result = await appointmentsCollection.insertOne(appointment);
+        // res.send(JSON.stringify(result));
+        //or
+        res.json(result)
+    });
+
       
     } finally {
     //   await client.close();
@@ -35,7 +54,7 @@ async function run() {
 
 
 app.get('/', (req, res) => {
-  res.send('Hello World!')
+  res.send('Care Zone Ok Server')
 })
 
 app.listen(port, () => {
