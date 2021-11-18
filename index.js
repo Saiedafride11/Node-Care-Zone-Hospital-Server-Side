@@ -4,8 +4,9 @@ require('dotenv').config();
 const cors = require('cors');
 // const bodyParser = require('body-parser');
 const ObjectId = require('mongodb').ObjectId;
-const stripe = require('stripe')(process.env.STRIPE_SECRET)
 const admin = require("firebase-admin");
+const stripe = require('stripe')(process.env.STRIPE_SECRET);
+const fileUpload = require('express-fileupload');
 
 const app = express()
 const port = process.env.PORT || 5000
@@ -14,6 +15,7 @@ app.use(cors())
 // app.use(bodyParser.json())
 // or
 app.use(express.json())
+app.use(fileUpload());
 
 
 // const serviceAccount = require("./node-care-zone.json");
@@ -48,7 +50,9 @@ async function run() {
       const database = client.db("careZone");
       const appointmentsCollection = database.collection("appointments");
       const usersCollection = database.collection('users');
-     
+      const doctorsCollection = database.collection('doctors');
+      
+      // appointments api
       app.get('/appointments', verifyToken, async (req, res) => {
         const email = req.query.email;
         // const date = new Date(req.query.date).toLocalDateString();
@@ -87,6 +91,37 @@ async function run() {
       res.json(result);
   })
 
+   // doctors api
+   app.get('/doctors', async (req, res) => {
+    const cursor = doctorsCollection.find({});
+    const doctors = await cursor.toArray();
+    res.json(doctors);
+  });
+
+  app.get('/doctors/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const doctor = await doctorsCollection.findOne(query);
+      res.json(doctor);
+  });
+
+  app.post('/doctors', async (req, res) => {
+      const name = req.body.name;
+      const email = req.body.email;
+      const pic = req.files.image;
+      const picData = pic.data;
+      const encodedPic = picData.toString('base64');
+      const imageBuffer = Buffer.from(encodedPic, 'base64');
+      const doctor = {
+          name,
+          email,
+          image: imageBuffer
+      }
+      const result = await doctorsCollection.insertOne(doctor);
+      res.json(result);
+  })
+
+    // users api
     app.get('/users/:email', async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
@@ -167,3 +202,12 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log('Care Zone Server Running', port)
 })
+
+
+// app.get('/users')
+// app.post('/users')
+// app.get('/users/:id')
+// app.put('/users/:id');
+// app.delete('/users/:id')
+// users: get
+// users: post
